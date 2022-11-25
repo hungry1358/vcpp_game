@@ -2,3 +2,5 @@ C:\Users\Hungry\Desktop\과제\이거 보면 하자... 제발\201907065\Debug\20
 C:\Users\Hungry\Desktop\과제\이거 보면 하자... 제발\201907065\Debug\201907065.pdb
 C:\Users\Hungry\Desktop\vcpp\201907065\Debug\201907065.exe
 C:\Users\Hungry\Desktop\vcpp\201907065\Debug\201907065.pdb
+C:\Users\Hungry\Desktop\tlqkf\vcpp_game\201907065\Debug\201907065.exe
+C:\Users\Hungry\Desktop\tlqkf\vcpp_game\201907065\Debug\201907065.pdb

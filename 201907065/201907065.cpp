@@ -135,34 +135,47 @@ RECT g_ground;
 RECT g_woodItem;
 // 돌 아이템
 RECT g_stoneItem;
-// 돌도끼
-RECT g_stoneAxe;
-// 게임 시간
-int g_gametime;
-// 게임 시간 표시 사각형
-RECT g_game;
+// 풀 아이템
+RECT g_grassItem;
+// 방망이
+RECT g_woodClub;
+
+// 프로그레스 바
+RECT g_progressBar;
+
 //나무 자원 갯수
 int g_wood = 0;
 //돌 자원 갯수 
 int g_stone = 0;
+//풀 자원 갯수
+int g_grass = 0;
+
 //플레이어의 체력
 int g_playerHP = 100;
 //적의 체력
 int g_enemyHP = 100;
 //플레이어의 핸드 : 0 없음, 1 몽둥이, 2 돌도끼, 3 새총, 4 활과 화살
 int g_hand = 0;
+//공격력
+int g_damage = 0;
+
 //플레이어 스레드의 핸들
 HANDLE g_hPlayer;
 // 치트키
 bool g_c = false;
+// 게임 시간
+int g_gametime;
 // 게임 진행 상태
 bool g_status = true;
+//제작상태 
+bool g_craft = false;
 //타이머 설정값
 int g_timer;
 // 스레드를 위한 hWnd
 HWND g_hWnd;
 //경고메시지
 int g_waring = 0;
+
 //적 스레드
 DWORD WINAPI Enemy(LPVOID param) {
 
@@ -210,25 +223,58 @@ DWORD WINAPI Hand(LPVOID param) {
 
     HDC hdc;
     hdc = GetDC(g_hWnd);
+    
+    switch (g_hand) {
+    case 1:
 
+        if (g_me.right != g_woodClub.left) {
+            g_woodClub.left = g_me.right;
+            g_woodClub.right = g_woodClub.left + 10;
+        }
+        if (g_me.top - 50 != g_woodClub.top) {
+            g_woodClub.top = g_me.top - 50;
+            g_woodClub.bottom = g_woodClub.top + 100;
+        }
+        InvalidateRect(g_hWnd, NULL, TRUE);
+        break;
+    }
     ReleaseDC(g_hWnd, hdc);
     ExitThread(0);
     return 0;
 }
 
-//돌도끼 스레드 
-DWORD WINAPI StoneAxe(LPVOID param) {
+////제작 진행도 표시를 위한 프로그레스 바
+//DWORD WINAPI ProgressBar(LPVOID param) {
+//
+//    HDC hdc;
+//    hdc = GetDC(g_hWnd);
+//    int i=0;
+//    g_craft = true;
+//
+//    for (i = 0; i < 100; i++) {
+//        g_progressBar.right += 1;
+//        Sleep(100);
+//        InvalidateRect(g_hWnd, NULL, TRUE);
+//    }
+//    g_craft = false;
+//    ReleaseDC(g_hWnd, hdc);
+//    ExitThread(0);
+//    return 0;
+//}
+
+/*
+DWORD WINAPI WoodClub(LPVOID param) {
 
     HDC hdc;
     hdc = GetDC(g_hWnd);
     
-    if (g_me.right != g_stoneAxe.left) {
-        g_stoneAxe.left = g_me.right;
-        g_stoneAxe.right = g_stoneAxe.left + 10;
+    if (g_me.right != g_woodClub.left) {
+        g_woodClub.left = g_me.right;
+        g_woodClub.right = g_woodClub.left + 10;
     }
-    if (g_me.top - 50 != g_stoneAxe.top) {
-        g_stoneAxe.top = g_me.top - 50;
-        g_stoneAxe.bottom = g_stoneAxe.top + 100;
+    if (g_me.top - 50 != g_woodClub.top) {
+        g_woodClub.top = g_me.top - 50;
+        g_woodClub.bottom = g_woodClub.top + 100;
     }
     
     InvalidateRect(g_hWnd, NULL, TRUE);
@@ -236,7 +282,7 @@ DWORD WINAPI StoneAxe(LPVOID param) {
     ExitThread(0);
     return 0;
 }
-
+*/
 DWORD WINAPI Waring(LPVOID param) {
     
     int i;
@@ -246,7 +292,7 @@ DWORD WINAPI Waring(LPVOID param) {
 
     switch (g_waring) {
     case 1:
-        for (i = 0; i < 300; i++) {
+        for (i = 0; i < 100; i++) {
             wsprintf(buf, L"자원이 부족합니다");
             TextOut(hdc, 1200, 200, buf, lstrlen(buf));
             Sleep(1);
@@ -269,19 +315,19 @@ DWORD WINAPI Player(LPVOID param) {
     hdc = GetDC(g_hWnd);
 
     switch ((WPARAM)param) {
-    case 0x41:
+    case 0x41:      //A키
         g_me.left -= 10;
         g_me.right -= 10;
         break;
-    case 0x44:
+    case 0x44:      //D키
         g_me.left += 10;
         g_me.right += 10;
         break;
-    case 0x57:
+    case 0x57:      //W키
         g_me.top -= 10;
         g_me.bottom -= 10;
         break;
-    case 0x53:
+    case 0x53:      //S키
         g_me.top += 10;
         g_me.bottom += 10;
         break;
@@ -316,6 +362,13 @@ DWORD WINAPI Player(LPVOID param) {
     return 0;
 }
 
+//플레이어 일시정지 함수
+void PlayerStop() {
+    SuspendThread(g_hPlayer);
+    Sleep(1000);
+    ResumeThread(g_hPlayer);
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -341,7 +394,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_LBUTTONDOWN:
     {
         
-        /*
+        
         int x, y;
         RECT is, tmp;
         x = LOWORD(lParam);
@@ -356,13 +409,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             //MessageBox(hWnd, L"눌렀다!", L"ok", MB_OK);
         }
-        */
+        
     }
     break;
 
     case WM_LBUTTONUP:
     {
-        /*
+        
         int x, y;
         x = LOWORD(lParam);
         y = HIWORD(lParam);
@@ -373,7 +426,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_me.bottom = y + 100;
 
         InvalidateRect(hWnd, NULL, TRUE);
-        */
+        
     }
     break;
 
@@ -394,12 +447,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         g_hPlayer = CreateThread(NULL, 0, Player, (LPVOID)wParam, 0, NULL);
-        CreateThread(NULL, 0, StoneAxe, (LPVOID)lParam, 0, NULL);
+        CreateThread(NULL, 0, Hand, (LPVOID)lParam, 0, NULL);
         // 아이템 획득 확인
         switch (wParam)
         {
         case VK_SPACE:
-            // 나무랑 플레이어랑 곂치면 나무 자원 랜덤위치에 생성
+            // 자원이랑 플레이어랑 곂치면 자원 랜덤위치에 생성
             if (true == IntersectRect(&is, &g_me, &g_woodItem))
             {
                 g_woodItem.left = 10 + (rand() % 1330);
@@ -407,11 +460,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 g_woodItem.right = g_woodItem.left + 70;
                 g_woodItem.bottom = g_woodItem.top + 130;
                 g_wood += 1;
-
-                //플레이어 스레드 일시정지
-                SuspendThread(g_hPlayer);
-                Sleep(1000);
-                ResumeThread(g_hPlayer);
+                PlayerStop();
             }
             if (true == IntersectRect(&is, &g_me, &g_stoneItem)) {
                 g_stoneItem.left = 10 + (rand() % 1320);
@@ -419,15 +468,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 g_stoneItem.right = g_stoneItem.left + 70;
                 g_stoneItem.bottom = g_stoneItem.top + 70;
                 g_stone += 1;
-
-                SuspendThread(g_hPlayer);
-                Sleep(1000);
-                ResumeThread(g_hPlayer);
+                PlayerStop();
+            }if (true == IntersectRect(&is, &g_me, &g_grassItem)) {
+                g_grassItem.left = 10 + (rand() % 1320);    
+                g_grassItem.top = 10 + (rand() % 570);      
+                g_grassItem.right = g_grassItem.left + 20;
+                g_grassItem.bottom = g_grassItem.top + 60;
+                g_grass += 1;
+                PlayerStop();
             }
             break;
-        case 0x31:
-            if (g_wood > 1) {
+        case 0x31:      //1번키
+            if (g_wood > 2) {
+                //CreateThread(NULL, 0, ProgressBar, (LPVOID)wParam, 0, NULL);
+                PlayerStop();
                 g_hand = 1;
+                g_wood -= 3;
             }
             else {
                 g_waring = 1;
@@ -542,7 +598,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CREATE:
     {
         g_hWnd = hWnd;
-
+        int i=0;
         //CreateThread(NULL, 0, Enemy, (LPVOID)wParam, 0, NULL);
 
         // 랜덤 시드 값 초기화
@@ -556,54 +612,61 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         SetTimer(hWnd, 2, 1000, NULL);
 
         //플레이어
-        g_me.left = 620;
-        g_me.top = 225;
+        g_me.left = 620;        //가로길이 60
+        g_me.top = 225;         //세로길이 100
         g_me.right = 680;
         g_me.bottom = 325;
 
         //적
-        g_you.left = 300;
-        g_you.top = 300;
+        g_you.left = 300;       //가로길이 100
+        g_you.top = 300;        //세로길이 100
         g_you.right = 400;
         g_you.bottom = 400;
 
         //그라운드
-        g_ground.left = 10;
-        g_ground.top = 10;
+        g_ground.left = 10;     //가로길이 1390
+        g_ground.top = 10;      //세로길이 640
         g_ground.right = 1400;
         g_ground.bottom = 650;
 
         //나무
-        g_woodItem.left = 10 + (rand() % 1320);
-        g_woodItem.top = 10 + (rand() % 510);
+        g_woodItem.left = 10 + (rand() % 1320);     //가로길이 70
+        g_woodItem.top = 10 + (rand() % 510);       //세로길이 130
         g_woodItem.right = g_woodItem.left + 70;
         g_woodItem.bottom = g_woodItem.top + 130;
 
         //돌
-        g_stoneItem.left = 10 + (rand() % 1320);
-        g_stoneItem.top = 10 + (rand() % 570);
+        g_stoneItem.left = 10 + (rand() % 1320);    //가로길이 70
+        g_stoneItem.top = 10 + (rand() % 570);      //세로길이 70
         g_stoneItem.right = g_stoneItem.left + 70;
         g_stoneItem.bottom = g_stoneItem.top + 70;
 
-        //돌도끼
+        //풀
+        g_grassItem.left = 10 + (rand() % 1320);    //가로길이 10
+        g_grassItem.top = 10 + (rand() % 570);      //세로길이 50
+        g_grassItem.right = g_grassItem.left + 20;
+        g_grassItem.bottom = g_grassItem.top + 60;
 
-        g_game.left = 10;
-        g_game.top = 520;
-        g_game.right = g_gametime * 10;
-        g_game.bottom = 560;
-
+        
+        ////프로그레스 바
+        //g_progressBar.left = g_me.left - 20;
+        //g_progressBar.top = g_me.top - 30;
+        //g_progressBar.right = g_progressBar.left;
+        //g_progressBar.bottom = g_progressBar.top + 10;
 
     }
     break;
 
     case WM_PAINT:
     {
+        int i;
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
         WCHAR buf[128] = { 0, };
         //무슨 자원인지 표시해주는 문자열
         WCHAR woodText[32] = { 0, };    
         WCHAR stoneText[32] = { 0, };   
+        WCHAR grassText[32] = { 0, };
 
         // 초록색 그라운드를 만들기 위한 브러시
         //HBRUSH ground_b, groundOs_b;
@@ -635,13 +698,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         wsprintf(stoneText, L"돌");
         TextOut(hdc, g_stoneItem.left + 25, g_stoneItem.top + 25, stoneText, lstrlen(stoneText));
 
+        //풀 
+        Rectangle(hdc, g_grassItem.left, g_grassItem.top, g_grassItem.right, g_grassItem.bottom);
+        wsprintf(grassText, L"풀");
+        TextOut(hdc, g_grassItem.left+2 , g_grassItem.top + 30, grassText, lstrlen(grassText));
+
         // 내 캐릭터
         //meOs_b = (HBRUSH)SelectObject(hdc, me_b);
         Rectangle(hdc, g_me.left, g_me.top, g_me.right, g_me.bottom);
 
         //돌도끼
-        if (g_wood > 2 && g_stone > 1)
-            Rectangle(hdc, g_stoneAxe.left, g_stoneAxe.top, g_stoneAxe.right, g_stoneAxe.bottom);
+        if (g_hand == 1)
+            Rectangle(hdc, g_woodClub.left, g_woodClub.top, g_woodClub.right, g_woodClub.bottom);
+        
 
         // 상대 캐릭터
         //Rectangle(hdc, g_you.left, g_you.top, g_you.right, g_you.bottom);
@@ -659,12 +728,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         //DeleteObject(wood_b);
         //DeleteObject(me_b);
 
-        
 
         wsprintf(buf, L"나무[ %d ]", g_wood);
         TextOut(hdc, 1330, 50, buf, lstrlen(buf));
         wsprintf(buf, L"돌[ %d ]", g_stone);
         TextOut(hdc, 1330, 70, buf, lstrlen(buf));
+        wsprintf(buf, L"풀[ %d ]", g_grass);
+        TextOut(hdc, 1330, 90, buf, lstrlen(buf));
     }
     break;
     case WM_DESTROY:
