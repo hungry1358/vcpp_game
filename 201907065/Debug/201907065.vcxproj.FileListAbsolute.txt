@@ -4,3 +4,5 @@ C:\Users\Hungry\Desktop\vcpp\201907065\Debug\201907065.exe
 C:\Users\Hungry\Desktop\vcpp\201907065\Debug\201907065.pdb
 C:\Users\Hungry\Desktop\tlqkf\vcpp_game\201907065\Debug\201907065.exe
 C:\Users\Hungry\Desktop\tlqkf\vcpp_game\201907065\Debug\201907065.pdb
+C:\Users\YUHAN\Desktop\솔개\vcpp_game\201907065\Debug\201907065.exe
+C:\Users\YUHAN\Desktop\솔개\vcpp_game\201907065\Debug\201907065.pdb

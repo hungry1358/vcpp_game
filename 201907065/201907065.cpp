@@ -128,7 +128,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 // 내 캐릭터
 RECT g_me;
 // 상대 캐릭터
-RECT g_you;
+RECT enemy1;
+//상대 캐릭터 생성
+int g_enemyVisible = 0;
 // 그라운드
 RECT g_ground;
 // 나무 아이템
@@ -139,10 +141,8 @@ RECT g_stoneItem;
 RECT g_grassItem;
 // 방망이
 RECT g_woodClub;
-
-// 프로그레스 바
-RECT g_progressBar;
-
+//돌도끼
+RECT g_stoneAxe1, g_stoneAxe2;
 //나무 자원 갯수
 int g_wood = 0;
 //돌 자원 갯수 
@@ -154,62 +154,76 @@ int g_grass = 0;
 int g_playerHP = 100;
 //적의 체력
 int g_enemyHP = 100;
-//플레이어의 핸드 : 0 없음, 1 몽둥이, 2 돌도끼, 3 새총, 4 활과 화살
+//플레이어의 핸드 : 0 없음, 1 몽둥이, 2 돌도끼, 3 활
 int g_hand = 0;
 //공격력
 int g_damage = 0;
+//공격 범위
+RECT g_attack;
 
 //플레이어 스레드의 핸들
 HANDLE g_hPlayer;
 // 치트키
 bool g_c = false;
-// 게임 시간
+// 적이 오기까지 남은 시간
 int g_gametime;
 // 게임 진행 상태
 bool g_status = true;
 //제작상태 
 bool g_craft = false;
+//화살
+RECT g_arrow;
 //타이머 설정값
-int g_timer;
+int g_timer1, g_timer2;
 // 스레드를 위한 hWnd
 HWND g_hWnd;
 //경고메시지
 int g_waring = 0;
 
+
 //적 스레드
 DWORD WINAPI Enemy(LPVOID param) {
-
+    
     RECT is;
     HDC hdc;
-
+  
     hdc = GetDC(g_hWnd);
 
-    while (IntersectRect(&is, &g_me, &g_you) == false)
+    enemy1.left = 5 + (rand() % 200);       //가로길이 100
+    enemy1.top = 5 + (rand() % 120);        //세로길이 100
+    enemy1.right = enemy1.left + 100;
+    enemy1.bottom = enemy1.top + 100;
+    
+
+    while (true)
     {
-        if (g_me.left < g_you.left)
-        {
-            g_you.left -= 10;
-            g_you.right -= 10;
-        }
-        else
-        {
-            g_you.left += 10;
-            g_you.right += 10;
-        }
-
-        if (g_me.top < g_you.top)
-        {
-            g_you.top -= 10;
-            g_you.bottom -= 10;
-        }
-        else
-        {
-            g_you.top += 10;
-            g_you.bottom += 10;
-        }
-
         InvalidateRect(g_hWnd, NULL, TRUE);
         Sleep(300);
+        if (IntersectRect(&is, &g_me, &enemy1) == true || g_enemyHP <= 0)
+            ExitThread(0);
+
+        if (g_me.left < enemy1.left)
+        {
+            enemy1.left -= 5;
+            enemy1.right -= 5;
+        }
+        else
+        {
+            enemy1.left += 5;
+            enemy1.right += 5;
+        }
+
+        if (g_me.top < enemy1.top)
+        {
+            enemy1.top -= 5;
+            enemy1.bottom -= 5;
+        }
+        else
+        {
+            enemy1.top += 5;
+            enemy1.bottom += 5;
+        }
+        
     }
 
     ReleaseDC(g_hWnd, hdc);
@@ -237,52 +251,149 @@ DWORD WINAPI Hand(LPVOID param) {
         }
         InvalidateRect(g_hWnd, NULL, TRUE);
         break;
+    case 2:
+        if (g_me.right != g_stoneAxe1.left) {
+            g_stoneAxe1.left = g_me.right;
+            g_stoneAxe1.right = g_stoneAxe1.left + 10;
+        }
+        if (g_me.top - 50 != g_stoneAxe1.top) {
+            g_stoneAxe1.top = g_me.top - 50;
+            g_stoneAxe1.bottom = g_stoneAxe1.top + 100;
+        }
+        if (g_stoneAxe1.left != g_stoneAxe2.left) {
+            g_stoneAxe2.left = g_stoneAxe1.left;
+            g_stoneAxe2.right = g_stoneAxe2.left + 60;
+        }
+        if (g_stoneAxe1.top != g_stoneAxe2.top) {
+            g_stoneAxe2.top = g_stoneAxe1.top;
+            g_stoneAxe2.bottom = g_stoneAxe2.top + 40;
+        }
+        InvalidateRect(g_hWnd, NULL, TRUE);
+        break;
     }
     ReleaseDC(g_hWnd, hdc);
     ExitThread(0);
     return 0;
 }
 
-////제작 진행도 표시를 위한 프로그레스 바
-//DWORD WINAPI ProgressBar(LPVOID param) {
-//
-//    HDC hdc;
-//    hdc = GetDC(g_hWnd);
-//    int i=0;
-//    g_craft = true;
-//
-//    for (i = 0; i < 100; i++) {
-//        g_progressBar.right += 1;
-//        Sleep(100);
-//        InvalidateRect(g_hWnd, NULL, TRUE);
-//    }
-//    g_craft = false;
-//    ReleaseDC(g_hWnd, hdc);
-//    ExitThread(0);
-//    return 0;
-//}
-
-/*
-DWORD WINAPI WoodClub(LPVOID param) {
-
+DWORD WINAPI Arrow(LPVOID param) {
+    RECT is;
     HDC hdc;
     hdc = GetDC(g_hWnd);
-    
-    if (g_me.right != g_woodClub.left) {
-        g_woodClub.left = g_me.right;
-        g_woodClub.right = g_woodClub.left + 10;
+    switch ((WPARAM)param) {
+    case VK_UP:
+        g_arrow.left = g_me.left + 25;
+        g_arrow.top = g_me.top - 100;
+        g_arrow.right = g_arrow.left + 10;
+        g_arrow.bottom = g_me.top;
+        while (true) {
+            if (IntersectRect(&is, &enemy1, &g_arrow) == true)
+                ExitThread(0);
+            g_arrow.top -= 10;
+            g_arrow.bottom -= 10;
+            Sleep(50);
+            InvalidateRect(g_hWnd, NULL, TRUE);
+        }
+        break;
+    case VK_DOWN:
+        g_arrow.left = g_me.left + 25;
+        g_arrow.top = g_me.bottom;
+        g_arrow.right = g_arrow.left + 10;
+        g_arrow.bottom = g_arrow.top + 100;
+        
+            if (IntersectRect(&is, &enemy1, &g_arrow) == true)
+                ExitThread(0);
+            g_arrow.top += 10;
+            g_arrow.bottom += 10;
+            Sleep(50);
+            InvalidateRect(g_hWnd, NULL, TRUE);
+        
+        break;
+    case VK_LEFT:
+        g_arrow.left = g_me.left - 100;
+        g_arrow.top = g_me.top + 45;
+        g_arrow.right = g_me.left;
+        g_arrow.bottom = g_arrow.top + 10;
+        
+            if (IntersectRect(&is, &enemy1, &g_arrow) == true)
+                ExitThread(0);
+            g_arrow.left -= 10;
+            g_arrow.right -= 10;
+            Sleep(50);
+            InvalidateRect(g_hWnd, NULL, TRUE);
+        
+        break;
+    case VK_RIGHT:
+        g_arrow.left = g_me.right;
+        g_arrow.top = g_me.top + 45;
+        g_arrow.right = g_arrow.left + 100;
+        g_arrow.bottom = g_arrow.top + 10;
+        
+            if (IntersectRect(&is, &enemy1, &g_arrow) == true)
+                ExitThread(0);
+            g_arrow.left += 10;
+            g_arrow.right += 10;
+            Sleep(50);
+            InvalidateRect(g_hWnd, NULL, TRUE);
+        
+        break;
     }
-    if (g_me.top - 50 != g_woodClub.top) {
-        g_woodClub.top = g_me.top - 50;
-        g_woodClub.bottom = g_woodClub.top + 100;
-    }
-    
-    InvalidateRect(g_hWnd, NULL, TRUE);
+
     ReleaseDC(g_hWnd, hdc);
     ExitThread(0);
     return 0;
 }
-*/
+
+DWORD WINAPI Attack(LPVOID param) {
+    RECT is;
+    HDC hdc;
+    hdc = GetDC(g_hWnd);
+
+    switch ((WPARAM)param) {
+    case VK_UP:
+        g_attack.left = g_me.left - 30;
+        g_attack.top = g_me.top - 70;
+        g_attack.right = g_me.right + 30;
+        g_attack.bottom = g_me.top;
+
+        if (IntersectRect(&is, &enemy1, &g_attack) == true)
+            g_enemyHP -= g_damage;
+        break;
+    case VK_DOWN:
+        g_attack.left = g_me.left - 30;
+        g_attack.top = g_me.bottom;
+        g_attack.right = g_me.right + 30;
+        g_attack.bottom = g_me.bottom + 70;
+        
+        if (IntersectRect(&is, &enemy1, &g_attack) == true)
+            g_enemyHP -= g_damage;
+        break;
+    case VK_LEFT:
+        g_attack.left = g_me.left - 70;
+        g_attack.top = g_me.top + 20;
+        g_attack.right = g_me.left;
+        g_attack.bottom = g_me.bottom - 20;
+
+        if (IntersectRect(&is, &enemy1, &g_attack) == true)
+            g_enemyHP -= g_damage;
+        break;
+    case VK_RIGHT:
+        g_attack.left = g_me.right;
+        g_attack.top = g_me.top + 20;
+        g_attack.right = g_me.right + 70;
+        g_attack.bottom = g_me.bottom - 20;
+
+        if (IntersectRect(&is, &enemy1, &g_attack) == true)
+            g_enemyHP -= g_damage;
+        break;
+    }
+
+    ReleaseDC(g_hWnd, hdc);
+    ExitThread(0);
+    return 0;
+}
+
+
 DWORD WINAPI Waring(LPVOID param) {
     
     int i;
@@ -393,8 +504,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_LBUTTONDOWN:
     {
-        
-        
         int x, y;
         RECT is, tmp;
         x = LOWORD(lParam);
@@ -430,24 +539,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     break;
 
-    /// 키를 입력하면 전달되는 메시지
-/*    case WM_KEYDOWN:
-    {
-        MessageBox(hWnd, L"키가 눌렸어요", L"54rtg", MB_OK);
-    }
-
-    break;
-*/
     case WM_KEYDOWN:
     {
-
+        DWORD tid;
         RECT is;
-        
         if (false == g_status)
             break;
+        g_hPlayer = CreateThread(NULL, 0, Player, (LPVOID)wParam, 0, &tid);
 
-        g_hPlayer = CreateThread(NULL, 0, Player, (LPVOID)wParam, 0, NULL);
+        CreateThread(NULL, 0, Arrow, (LPVOID)wParam, 0, NULL);
         CreateThread(NULL, 0, Hand, (LPVOID)lParam, 0, NULL);
+        CreateThread(NULL, 0, Attack, (LPVOID)wParam, 0, NULL);
         // 아이템 획득 확인
         switch (wParam)
         {
@@ -480,16 +582,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         case 0x31:      //1번키
             if (g_wood > 2) {
-                //CreateThread(NULL, 0, ProgressBar, (LPVOID)wParam, 0, NULL);
                 PlayerStop();
                 g_hand = 1;
                 g_wood -= 3;
+                g_damage = 2;
             }
             else {
                 g_waring = 1;
                 CreateThread(NULL, 0, Waring, (LPVOID)lParam, 0, NULL);
             }
             break;
+        case 0x32:      //2번키
+            if (g_wood > 3 && g_stone > 2) {
+                PlayerStop();
+                g_hand = 2;
+                g_wood -= 4;
+                g_stone -= 3;
+                g_damage = 4;
+            }
+            else {
+                g_waring = 1;
+                CreateThread(NULL, 0, Waring, (LPVOID)lParam, 0, NULL);
+            }
+            break;
+        case 0x33:
+            g_hand = 3;
+            
+            break;
+
         }
         /*
     case VK_LEFT:
@@ -541,75 +661,47 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_TIMER:
     {
-        /*
+        HDC hdc;
+        hdc = GetDC(g_hWnd);
+
         if (1 == wParam)
         {
-            RECT is;
-
-            if (g_timer >= 200)
-                g_timer -= 100;
-            KillTimer(hWnd, 1);
-            SetTimer(hWnd, 1, g_timer, NULL);
-
-            if (g_me.left < g_you.left)
-            {
-                g_you.left -= 10;
-                g_you.right -= 10;
-            }
-            else
-            {
-                g_you.left += 10;
-                g_you.right += 10;
-            }
-            if (g_me.top < g_you.top)
-            {
-                g_you.top -= 10;
-                g_you.bottom -= 10;
-            }
-            else
-            {
-                g_you.top += 10;
-                g_you.bottom += 10;
-            }
-            if (true == IntersectRect(&is, &g_me, &g_you))
-            {
-                KillTimer(hWnd, 1);
-                MessageBox(hWnd, L"잡혔습니다.", L"KIM윤재", MB_OK);
-            }
-
-
-
-        }
-        else if (2 == wParam)
-        {
-            g_gametime--;   // 게임 시간 감소
+            g_gametime--;   // 남은 시간 감소
+            
             if (0 >= g_gametime)
             {
-                g_status = false;
-                g_gametime = 0;
                 KillTimer(hWnd, 1);
-                KillTimer(hWnd, 2);
+                SetTimer(hWnd, 2, g_timer2, NULL);
+                //CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
             }
-            g_game.right = 10 + (g_gametime * 10);
+           
         }
-        InvalidateRect(hWnd, NULL, true);*/
+        else if(2 == wParam) 
+        {
+            g_enemyVisible = 1;
+           // CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
+            KillTimer(hWnd, 2);
+        }
+
+        ReleaseDC(g_hWnd, hdc);
+        InvalidateRect(hWnd, NULL, true);
     }
     break;
     case WM_CREATE:
     {
         g_hWnd = hWnd;
         int i=0;
-        //CreateThread(NULL, 0, Enemy, (LPVOID)wParam, 0, NULL);
+        CreateThread(NULL, 0, Enemy, (LPVOID)wParam, 0, NULL);
 
         // 랜덤 시드 값 초기화
         srand(time(NULL));
 
-        // 게임 시간 초기화
-        g_gametime = 10;
+        // 남은 시간 초기화
+        g_gametime = 5;
 
-        g_timer = 1000;
-        SetTimer(hWnd, 1, g_timer, NULL);
-        SetTimer(hWnd, 2, 1000, NULL);
+        g_timer1 = 1000;    
+        g_timer2 = 5000;    
+        SetTimer(hWnd, 1, g_timer1, NULL);  //1번으로 타이머 설정
 
         //플레이어
         g_me.left = 620;        //가로길이 60
@@ -617,11 +709,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_me.right = 680;
         g_me.bottom = 325;
 
-        //적
-        g_you.left = 300;       //가로길이 100
-        g_you.top = 300;        //세로길이 100
-        g_you.right = 400;
-        g_you.bottom = 400;
 
         //그라운드
         g_ground.left = 10;     //가로길이 1390
@@ -647,12 +734,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_grassItem.right = g_grassItem.left + 20;
         g_grassItem.bottom = g_grassItem.top + 60;
 
-        
-        ////프로그레스 바
-        //g_progressBar.left = g_me.left - 20;
-        //g_progressBar.top = g_me.top - 30;
-        //g_progressBar.right = g_progressBar.left;
-        //g_progressBar.bottom = g_progressBar.top + 10;
+
 
     }
     break;
@@ -684,8 +766,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         //groundOs_b = (HBRUSH)SelectObject(hdc, ground_b);
         Rectangle(hdc, g_ground.left, g_ground.top, g_ground.right, g_ground.bottom);
 
-        //상대
-        Rectangle(hdc, g_you.left, g_you.top, g_you.right, g_you.bottom);
+        // 상대 캐릭터
+        if (g_enemyHP > 0)
+        {
+            Rectangle(hdc, enemy1.left, enemy1.top, enemy1.right, enemy1.bottom);
+            wsprintf(buf, L"[ %d ]", g_enemyHP);
+            TextOut(hdc, enemy1.left + 30, enemy1.top + 30, buf, lstrlen(buf));
+        }
 
         // 나무
         //woodOs_b = (HBRUSH)SelectObject(hdc, wood_b);
@@ -707,18 +794,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         //meOs_b = (HBRUSH)SelectObject(hdc, me_b);
         Rectangle(hdc, g_me.left, g_me.top, g_me.right, g_me.bottom);
 
-        //돌도끼
+        //방망이
         if (g_hand == 1)
             Rectangle(hdc, g_woodClub.left, g_woodClub.top, g_woodClub.right, g_woodClub.bottom);
+        else if (g_hand == 2) {
+            Rectangle(hdc, g_stoneAxe1.left, g_stoneAxe1.top, g_stoneAxe1.right, g_stoneAxe1.bottom);
+            Rectangle(hdc, g_stoneAxe2.left, g_stoneAxe2.top, g_stoneAxe2.right, g_stoneAxe2.bottom);
+        }
+        else if (g_hand == 3) {
+            Rectangle(hdc, g_arrow.left, g_arrow.top, g_arrow.right, g_arrow.bottom);
+        }
         
-
-        // 상대 캐릭터
-        //Rectangle(hdc, g_you.left, g_you.top, g_you.right, g_you.bottom);
-
-        // 게임 시간 표시
-        //Rectangle(hdc, g_game.left, g_game.top, g_game.right, g_game.bottom);
-        //EndPaint(hWnd, &ps);
-
+        
         //브러시 교체
         //SelectObject(hdc, groundOs_b);
         //SelectObject(hdc, woodOs_b);
@@ -735,6 +822,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         TextOut(hdc, 1330, 70, buf, lstrlen(buf));
         wsprintf(buf, L"풀[ %d ]", g_grass);
         TextOut(hdc, 1330, 90, buf, lstrlen(buf));
+        wsprintf(buf, L"남은 시간 : [ %d ]", g_gametime);
+        TextOut(hdc, 1290, 110, buf, lstrlen(buf));
+        wsprintf(buf, L"남은체력[ %d ]", g_playerHP);
+        TextOut(hdc, 1290, 150, buf, lstrlen(buf));
     }
     break;
     case WM_DESTROY:
