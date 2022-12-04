@@ -151,7 +151,7 @@ int g_stone = 0;
 int g_grass = 0;
 
 //플레이어의 체력
-int g_playerHP = 100;
+int g_playerHP = 10;
 //적의 체력
 int g_enemyHP = 100;
 //플레이어의 핸드 : 0 없음, 1 몽둥이, 2 돌도끼, 3 활
@@ -199,8 +199,13 @@ DWORD WINAPI Enemy(LPVOID param) {
     {
         InvalidateRect(g_hWnd, NULL, TRUE);
         Sleep(300);
-        if (IntersectRect(&is, &g_me, &enemy1) == true || g_enemyHP <= 0)
+        if (g_enemyHP <= 0)
             ExitThread(0);
+        else if (IntersectRect(&is, &g_me, &enemy1) == true) 
+        {
+            g_playerHP -= 10;
+            Sleep(500);
+        }
 
         if (g_me.left < enemy1.left)
         {
@@ -279,60 +284,61 @@ DWORD WINAPI Hand(LPVOID param) {
 DWORD WINAPI Arrow(LPVOID param) {
     RECT is;
     HDC hdc;
+    RECT arrow;
     hdc = GetDC(g_hWnd);
     switch ((WPARAM)param) {
     case VK_UP:
-        g_arrow.left = g_me.left + 25;
-        g_arrow.top = g_me.top - 100;
-        g_arrow.right = g_arrow.left + 10;
-        g_arrow.bottom = g_me.top;
-        while (true) {
-            if (IntersectRect(&is, &enemy1, &g_arrow) == true)
+        arrow.left = g_me.left + 25;
+        arrow.top = g_me.top - 100;
+        arrow.right = arrow.left + 10;
+        arrow.bottom = g_me.top;
+        while (IntersectRect(&is, &enemy1, &arrow) == false) {
+            if (IntersectRect(&is, &enemy1, &arrow) == true)
                 ExitThread(0);
-            g_arrow.top -= 10;
-            g_arrow.bottom -= 10;
+            arrow.top -= 10;
+            arrow.bottom -= 10;
             Sleep(50);
             InvalidateRect(g_hWnd, NULL, TRUE);
         }
         break;
     case VK_DOWN:
-        g_arrow.left = g_me.left + 25;
-        g_arrow.top = g_me.bottom;
-        g_arrow.right = g_arrow.left + 10;
-        g_arrow.bottom = g_arrow.top + 100;
-        
-            if (IntersectRect(&is, &enemy1, &g_arrow) == true)
+        arrow.left = g_me.left + 25;
+        arrow.top = g_me.bottom;
+        arrow.right = arrow.left + 10;
+        arrow.bottom = arrow.top + 100;
+        while (IntersectRect(&is, &enemy1, &arrow) == false) {
+            if (IntersectRect(&is, &enemy1, &arrow) == true)
                 ExitThread(0);
-            g_arrow.top += 10;
-            g_arrow.bottom += 10;
+            arrow.top += 10;
+            arrow.bottom += 10;
             Sleep(50);
             InvalidateRect(g_hWnd, NULL, TRUE);
-        
+        }
         break;
     case VK_LEFT:
-        g_arrow.left = g_me.left - 100;
-        g_arrow.top = g_me.top + 45;
-        g_arrow.right = g_me.left;
-        g_arrow.bottom = g_arrow.top + 10;
+        arrow.left = g_me.left - 100;
+        arrow.top = g_me.top + 45;
+        arrow.right = g_me.left;
+        arrow.bottom = arrow.top + 10;
         
-            if (IntersectRect(&is, &enemy1, &g_arrow) == true)
+            if (IntersectRect(&is, &enemy1, &arrow) == true)
                 ExitThread(0);
-            g_arrow.left -= 10;
-            g_arrow.right -= 10;
+            arrow.left -= 10;
+            arrow.right -= 10;
             Sleep(50);
             InvalidateRect(g_hWnd, NULL, TRUE);
         
         break;
     case VK_RIGHT:
-        g_arrow.left = g_me.right;
-        g_arrow.top = g_me.top + 45;
-        g_arrow.right = g_arrow.left + 100;
-        g_arrow.bottom = g_arrow.top + 10;
+        arrow.left = g_me.right;
+        arrow.top = g_me.top + 45;
+        arrow.right = arrow.left + 100;
+        arrow.bottom = arrow.top + 10;
         
-            if (IntersectRect(&is, &enemy1, &g_arrow) == true)
+            if (IntersectRect(&is, &enemy1, &arrow) == true)
                 ExitThread(0);
-            g_arrow.left += 10;
-            g_arrow.right += 10;
+            arrow.left += 10;
+            arrow.right += 10;
             Sleep(50);
             InvalidateRect(g_hWnd, NULL, TRUE);
         
@@ -410,8 +416,6 @@ DWORD WINAPI Waring(LPVOID param) {
         }
         break;
     }
-    
-
     ReleaseDC(g_hWnd, hdc);
     ExitThread(0);
     return 0;
@@ -473,6 +477,17 @@ DWORD WINAPI Player(LPVOID param) {
     return 0;
 }
 
+//게임오버 함수
+DWORD WINAPI Gameover(LPVOID param) {
+    if (g_playerHP <= 0) {
+        g_playerHP = 0;
+        MessageBox(g_hWnd, L"죽었습니다", L"게임오버", MB_OK);
+        SuspendThread(g_hPlayer);
+    }
+    ExitThread(0);
+    return 0;
+}
+
 //플레이어 일시정지 함수
 void PlayerStop() {
     SuspendThread(g_hPlayer);
@@ -482,6 +497,7 @@ void PlayerStop() {
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    
     switch (message)
     {
     case WM_COMMAND:
@@ -514,10 +530,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         tmp.right = x + 1;
         tmp.bottom = y + 1;
 
-        if (true == IntersectRect(&is, &tmp, &g_me))
-        {
-            //MessageBox(hWnd, L"눌렀다!", L"ok", MB_OK);
-        }
         
     }
     break;
@@ -545,11 +557,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         RECT is;
         if (false == g_status)
             break;
+        
         g_hPlayer = CreateThread(NULL, 0, Player, (LPVOID)wParam, 0, &tid);
 
         CreateThread(NULL, 0, Arrow, (LPVOID)wParam, 0, NULL);
         CreateThread(NULL, 0, Hand, (LPVOID)lParam, 0, NULL);
         CreateThread(NULL, 0, Attack, (LPVOID)wParam, 0, NULL);
+
         // 아이템 획득 확인
         switch (wParam)
         {
@@ -672,15 +686,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 KillTimer(hWnd, 1);
                 SetTimer(hWnd, 2, g_timer2, NULL);
-                //CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
+                CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
             }
            
         }
         else if(2 == wParam) 
         {
-            g_enemyVisible = 1;
-           // CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
-            KillTimer(hWnd, 2);
+            if (g_playerHP <= 0)
+            {
+                CreateThread(NULL, 0, Gameover, (LPVOID)wParam, 0, NULL);
+                KillTimer(hWnd, 2);
+            }
+           //CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
+           
         }
 
         ReleaseDC(g_hWnd, hdc);
@@ -691,7 +709,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         g_hWnd = hWnd;
         int i=0;
-        CreateThread(NULL, 0, Enemy, (LPVOID)wParam, 0, NULL);
+        //CreateThread(NULL, 0, Enemy, (LPVOID)wParam, 0, NULL);
 
         // 랜덤 시드 값 초기화
         srand(time(NULL));
@@ -700,7 +718,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_gametime = 5;
 
         g_timer1 = 1000;    
-        g_timer2 = 5000;    
+        g_timer2 = 500;    
         SetTimer(hWnd, 1, g_timer1, NULL);  //1번으로 타이머 설정
 
         //플레이어
@@ -802,10 +820,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             Rectangle(hdc, g_stoneAxe2.left, g_stoneAxe2.top, g_stoneAxe2.right, g_stoneAxe2.bottom);
         }
         else if (g_hand == 3) {
-            Rectangle(hdc, g_arrow.left, g_arrow.top, g_arrow.right, g_arrow.bottom);
+            //Rectangle(hdc, g_arrow.left, g_arrow.top, g_arrow.right, g_arrow.bottom);
         }
-        
-        
         //브러시 교체
         //SelectObject(hdc, groundOs_b);
         //SelectObject(hdc, woodOs_b);
@@ -824,8 +840,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         TextOut(hdc, 1330, 90, buf, lstrlen(buf));
         wsprintf(buf, L"남은 시간 : [ %d ]", g_gametime);
         TextOut(hdc, 1290, 110, buf, lstrlen(buf));
-        wsprintf(buf, L"남은체력[ %d ]", g_playerHP);
-        TextOut(hdc, 1290, 150, buf, lstrlen(buf));
+        if (g_playerHP > 0) {
+            wsprintf(buf, L"남은체력[ %d ]", g_playerHP);
+            TextOut(hdc, 1290, 150, buf, lstrlen(buf));
+        }
+        else
+            g_playerHP = 0;
     }
     break;
     case WM_DESTROY:
