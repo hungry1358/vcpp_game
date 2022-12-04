@@ -183,7 +183,6 @@ int g_waring = 0;
 
 //적 스레드
 DWORD WINAPI Enemy(LPVOID param) {
-    
     RECT is;
     HDC hdc;
   
@@ -193,7 +192,7 @@ DWORD WINAPI Enemy(LPVOID param) {
     enemy1.top = 5 + (rand() % 120);        //세로길이 100
     enemy1.right = enemy1.left + 100;
     enemy1.bottom = enemy1.top + 100;
-    
+    Rectangle(hdc, enemy1.left, enemy1.top, enemy1.right, enemy1.bottom);
 
     while (true)
     {
@@ -281,6 +280,7 @@ DWORD WINAPI Hand(LPVOID param) {
     return 0;
 }
 
+//화살 스레드
 DWORD WINAPI Arrow(LPVOID param) {
     RECT is;
     HDC hdc;
@@ -350,6 +350,7 @@ DWORD WINAPI Arrow(LPVOID param) {
     return 0;
 }
 
+//공격 스레드
 DWORD WINAPI Attack(LPVOID param) {
     RECT is;
     HDC hdc;
@@ -399,7 +400,7 @@ DWORD WINAPI Attack(LPVOID param) {
     return 0;
 }
 
-
+//경고 메시지 스레드
 DWORD WINAPI Waring(LPVOID param) {
     
     int i;
@@ -477,7 +478,7 @@ DWORD WINAPI Player(LPVOID param) {
     return 0;
 }
 
-//게임오버 함수
+//게임오버 스레드
 DWORD WINAPI Gameover(LPVOID param) {
     if (g_playerHP <= 0) {
         g_playerHP = 0;
@@ -488,6 +489,24 @@ DWORD WINAPI Gameover(LPVOID param) {
     return 0;
 }
 
+//DWORD WINAPI Enemy2(LPVOID prc) {
+//    RECT is;
+//    HDC hdc;
+//    RECT rc = *(LPRECT)prc;
+//    hdc = GetDC(g_hWnd);
+//    
+//    for (;;) {
+//        Sleep(100);
+//        Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
+//        InvalidateRect(g_hWnd, NULL, TRUE);
+//        if (IntersectRect(&is, &g_me, &rc) == true)
+//            ExitThread(0);
+//    }
+//
+//    ReleaseDC(g_hWnd, hdc);
+//    return 0;
+//}
+
 //플레이어 일시정지 함수
 void PlayerStop() {
     SuspendThread(g_hPlayer);
@@ -497,7 +516,19 @@ void PlayerStop() {
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    
+    //DWORD ThreadID;
+    //int rect[] = {
+    //    5 + (rand() % 200), 5 + (rand() % 120),
+    //    5 + (rand() % 200), 5 + (rand() % 120),
+    //    5 + (rand() % 200), 5 + (rand() % 120),
+    //    5 + (rand() % 200), 5 + (rand() % 120)
+    //};
+    //static RECT arRect[] = {
+    //    {rect[0], rect[1], rect[0] + 100, rect[1] + 100},
+    //    {rect[2], rect[3], rect[2] + 100, rect[3] + 100},
+    //    {rect[4], rect[5], rect[4] + 100, rect[5] + 100},
+    //    {rect[6], rect[7], rect[6] + 100, rect[7] + 100}
+    //};
     switch (message)
     {
     case WM_COMMAND:
@@ -619,7 +650,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 CreateThread(NULL, 0, Waring, (LPVOID)lParam, 0, NULL);
             }
             break;
-        case 0x33:
+        case 0x33:      //3번키
             g_hand = 3;
             
             break;
@@ -686,15 +717,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 KillTimer(hWnd, 1);
                 SetTimer(hWnd, 2, g_timer2, NULL);
-                CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
+                //CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
             }
            
         }
         else if(2 == wParam) 
         {
-            if (g_playerHP <= 0)
+            if (g_playerHP <= 0)    //플레이어의 체력이 0이면 게임오버 메시지 띄움
             {
-                CreateThread(NULL, 0, Gameover, (LPVOID)wParam, 0, NULL);
+                //CreateThread(NULL, 0, Gameover, (LPVOID)wParam, 0, NULL);
                 KillTimer(hWnd, 2);
             }
            //CreateThread(NULL, 0, Enemy, g_hWnd, 0, NULL);
@@ -708,8 +739,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CREATE:
     {
         g_hWnd = hWnd;
-        int i=0;
-        //CreateThread(NULL, 0, Enemy, (LPVOID)wParam, 0, NULL);
+        int i;
+        CreateThread(NULL, 0, Enemy, (LPVOID)wParam, 0, NULL);
+        /*for (i = 0; i < 4; i++) {
+            CloseHandle(CreateThread(NULL, 0, Enemy2, &arRect[i], 0, &ThreadID));
+        }*/
+        
 
         // 랜덤 시드 값 초기화
         srand(time(NULL));
@@ -751,7 +786,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_grassItem.top = 10 + (rand() % 570);      //세로길이 50
         g_grassItem.right = g_grassItem.left + 20;
         g_grassItem.bottom = g_grassItem.top + 60;
-
 
 
     }
